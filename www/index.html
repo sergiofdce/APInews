@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Image Viewer</title>
+    <!-- Compiled and minified CSS -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link href="css/materialize.css" rel="stylesheet" />
+    <link href="css/style.css" rel="stylesheet" media="screen,projection" />
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="js/materialize.js"></script>
+    <script type="text/javascript" src="cordova.js"></script>
+</head>
+
+<body>
+
+    <!-- Side Nav -->
+    <ul id="slide-out" class="sidenav">
+        <li>
+            <div class="user-view">
+                <div class="background">
+                    <img src="https://materializeweb.com/images/office.jpg">
+                </div>
+                <a href="#user"><img class="circle" src="https://materializeweb.com/images/yuna.jpg"></a>
+                <a href="#name"><span class="white-text name">John Doe</span></a>
+                <a href="#email"><span class="white-text email">jdoe@example.com</span></a>
+            </div>
+        </li>
+        <li><a href="#!"><i class="material-icons">cloud</i>First Link With Icon</a></li>
+        <li><a href="#!">Second Link</a></li>
+        <li>
+            <div class="divider"></div>
+        </li>
+        <li><a class="subheader">Subheader</a></li>
+        <li><a class="waves-effect" href="#!">Third Link With Waves</a></li>
+    </ul>
+
+    <!-- Tabs Swipes -->
+    <ul id="tabs-swipe-demo" class="tabs" style="display: flex;">
+        <li>
+            <a href="#" data-target="slide-out" class="sidenav-trigger">
+                <i class="material-icons" style="margin: 50% 50%;">menu</i>
+            </a>
+        </li>
+        <li class="tab col s3"><a class="active" href="#test-swipe-1">Test 1</a></li>
+        <li class="tab col s3"><a href="#test-swipe-2">Test 2</a></li>
+        <li class="tab col s3"><a href="#test-swipe-3">Test 3</a></li>
+    </ul>
+
+    <!-- Contenido -->
+    <div id="test-swipe-1" class="col s12 blue">
+        <div class="container">
+            <div id="dog-list" class="row">
+                <!-- Aquí se añadirán las imágenes -->
+            </div>
+        </div>
+    </div>
+    <div id="test-swipe-2" class="col s12 red center-align">
+        <p>Clica una imagen de Tab 1 para mostrar</p>
+    </div>
+    <div id="test-swipe-3" class="col s12 green">
+        <div class="container">
+            <div class="row center-align">
+                <div class="col s12">
+                    <script type="text/javascript" src="cordova.js"></script>
+                    <button id="btnCapture" class="btn waves-effect waves-light">
+                        <i class="material-icons left">camera_alt</i>
+                        Tomar Foto
+                    </button>
+                </div>
+                <div class="col s12">
+                    <img id="userPhoto" style="max-width: 100%; margin-top: 20px; display: none;" alt="Foto capturada">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inicialización de Materialize y API de perros
+        document.addEventListener('DOMContentLoaded', function () {
+            // Inicializar tabs y sidenav
+            var elems = document.querySelectorAll('.tabs');
+            var tabInstances = M.Tabs.init(elems, {});
+
+            var sidenavElems = document.querySelectorAll('.sidenav');
+            var sidenavInstances = M.Sidenav.init(sidenavElems, {});
+
+            // Array donde guardar llamadas API
+            let dogArray = []; 
+
+            // Maximo 10 peitciones
+            let requests = [];
+            for (let i = 0; i < 10; i++) {
+                requests.push(
+                    fetch("https://random.dog/woof.json")
+                        .then(response => response.json())
+                );
+            }
+
+            // Guardar elementos en array
+            Promise.all(requests).then(responses => {
+                responses.forEach(msg => {
+                    let url = msg.url;
+                    // No guardar videos, solo imagenes
+                    if (url.endsWith(".mp4") || url.endsWith(".webm")) {
+                        return fetch("https://random.dog/woof.json")
+                            .then(response => response.json())
+                            .then(newMsg => {
+                                dogArray.push(newMsg.url);
+                            });
+                    }
+                    dogArray.push(url);
+                });
+
+                // Mostramos las imágenes desde el array
+                let dogListContainer = document.getElementById("dog-list");
+                dogArray.forEach(url => {
+                    let colDiv = document.createElement("div");
+                    colDiv.classList.add("col", "s6", "m4", "l3");
+
+                    let media = document.createElement("img");
+                    media.setAttribute("src", url);
+                    media.setAttribute("alt", "Random Dog");
+                    media.classList.add("dog-item", "responsive-img");
+
+                    colDiv.appendChild(media);
+                    dogListContainer.appendChild(colDiv);
+                });
+
+                // Añadir evento de clic a las imágenes
+                document.querySelectorAll(".dog-item").forEach(item => {
+                    item.addEventListener("click", function () {
+                        let clickedUrl = this.getAttribute("src");
+                        let mediaElement = document.createElement("img");
+                        mediaElement.setAttribute("src", clickedUrl);
+                        mediaElement.setAttribute("alt", "Clicked Dog");
+                        mediaElement.classList.add("dog-view", "responsive-img");
+
+                        // Limpiamos y mostramos la imagen en #test-swipe-2
+                        let tab2Content = document.getElementById("test-swipe-2");
+                        tab2Content.innerHTML = "";
+                        tab2Content.appendChild(mediaElement);
+
+                        // Cambiar al tab 2 usando Materialize JS
+                        var elem = document.querySelector('.tabs');
+                        var instance = M.Tabs.getInstance(elem);
+                        instance.select('test-swipe-2');
+                    });
+                });
+
+            }).catch((error) => {
+                console.error("ERROR:", error);
+                alert("Error fetching dog images");
+            });
+        });
+
+        // Manejo de la cámara
+        document.addEventListener('deviceready', function() {
+            console.log('Cordova está listo');
+            
+            document.getElementById("btnCapture").addEventListener("click", function() {
+                navigator.camera.getPicture(onSuccess, onFail, {
+                    quality: 100,
+                    destinationType: Camera.DestinationType.DATA_URL,
+                    encodingType: Camera.EncodingType.JPEG,
+                    mediaType: Camera.MediaType.PICTURE,
+                    correctOrientation: true,
+                    sourceType: Camera.PictureSourceType.CAMERA
+                });
+            });
+        });
+
+        function onSuccess(imageData) {
+            // Convertir la imagen a base64
+            const base64Image = imageData;
+
+            // Actualizar el avatar del menú lateral
+            document.querySelector('.circle').src = base64Image;
+
+            // Guardar en localStorage
+            localStorage.setItem("profilePhoto", base64Image);
+        }
+
+        function onFail(message) {
+            alert('Error: ' + message);
+        }
+    </script>
+</body>
+
+</html>
